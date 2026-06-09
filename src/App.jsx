@@ -206,217 +206,187 @@ function TxModal({ onClose, onSubmit, locations, products }) {
   )
 }
 
-// ── 員工：商品卡片
+const CARD_COLORS = ['#f97316','#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16','#a855f7']
+
+// ── 員工：商品卡片（新設計）
 function ProductCard({ product, cartQty, onAdd, onRemove, stockInfo }) {
+  const color = CARD_COLORS[product.name.charCodeAt(0) % CARD_COLORS.length]
   const pct = stockInfo ? Math.min(100, Math.round(stockInfo.quantity / (stockInfo.threshold || 1) * 100)) : null
   const st = pct !== null ? getStatus(pct) : null
+
   return (
-    <div style={{ ...G.card, display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', minHeight: 140 }}>
-      {st && (
-        <span style={{ position: 'absolute', top: 10, right: 10, fontSize: 10, padding: '2px 7px', borderRadius: 99, background: st.bg, color: st.color, fontWeight: 600 }}>
-          {st.label}
-        </span>
-      )}
-      <div style={{ fontSize: 14, fontWeight: 700, paddingRight: 70, lineHeight: 1.4 }}>{product.name}</div>
-      {stockInfo ? (
-        <>
-          <div style={{ fontSize: 11, color: '#64748b' }}>倉庫現有：{stockInfo.quantity}{stockInfo.unit}</div>
-          <StockBar qty={stockInfo.quantity} threshold={stockInfo.threshold} height={4} />
-        </>
-      ) : (
-        <div style={{ fontSize: 11, color: '#334155' }}>庫存資料未設定</div>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto' }}>
-        {cartQty > 0 ? (
-          <>
-            <button onClick={onRemove} style={{ ...G.btn, padding: '5px 13px', fontSize: 18, lineHeight: 1, flex: 1 }}>−</button>
-            <span style={{ fontSize: 20, fontWeight: 700, fontFamily: 'monospace', minWidth: 30, textAlign: 'center', color: '#f97316' }}>{cartQty}</span>
-            <button onClick={onAdd} style={{ ...G.btnPrimary, padding: '5px 13px', fontSize: 18, lineHeight: 1, flex: 1 }}>＋</button>
-          </>
-        ) : (
-          <button onClick={onAdd} style={{ ...G.btnPrimary, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 12px' }}>
+    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {/* 圓形圖示區 */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '18px 12px 10px', position: 'relative' }}>
+        {st && (
+          <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 9, padding: '2px 6px', borderRadius: 99, background: st.bg, color: st.color, fontWeight: 700 }}>
+            {st.label}
+          </span>
+        )}
+        <div style={{ width: 80, height: 80, borderRadius: '50%', background: `linear-gradient(135deg,${color}cc,${color}55)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', fontWeight: 800, letterSpacing: '-0.02em', boxShadow: `0 4px 16px ${color}44` }}>
+          {product.name.slice(0, 2)}
+        </div>
+      </div>
+      {/* 品名 */}
+      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, padding: '0 10px 4px', lineHeight: 1.4, color: '#f1f5f9' }}>
+        {product.name}
+      </div>
+      {/* 庫存 */}
+      <div style={{ textAlign: 'center', fontSize: 11, color: '#475569', paddingBottom: 12 }}>
+        {stockInfo ? `庫存 ${stockInfo.quantity}${stockInfo.unit}` : '未設定'}
+      </div>
+      {/* 按鈕 */}
+      <div style={{ marginTop: 'auto' }}>
+        {cartQty === 0 ? (
+          <button onClick={onAdd} style={{ width: '100%', background: color, color: '#fff', border: 'none', padding: '11px', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
             <Plus size={14} /> 加入
           </button>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <button onClick={onRemove} style={{ flex: 1, padding: '10px', fontSize: 18, background: 'none', border: 'none', color: '#f1f5f9', cursor: 'pointer', lineHeight: 1 }}>−</button>
+            <span style={{ fontSize: 17, fontWeight: 700, color, minWidth: 32, textAlign: 'center', fontFamily: 'monospace' }}>{cartQty}</span>
+            <button onClick={onAdd} style={{ flex: 1, padding: '10px', fontSize: 18, background: 'none', border: 'none', color: '#f1f5f9', cursor: 'pointer', lineHeight: 1 }}>＋</button>
+          </div>
         )}
       </div>
     </div>
   )
 }
 
-// ── 員工：購物車面板
-function CartPanel({ cart, onQtyChange, onRemove, locations, onSubmit, submitting, isMobile }) {
+// ── 員工主畫面（底部購物車 bar + 抽屜結帳）
+function EmployeeView({ products, inventory, locations, cart, setCart }) {
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [showSheet, setShowSheet] = useState(false)
   const [operator, setOperator] = useState('')
   const [toId, setToId] = useState('')
   const [note, setNote] = useState('')
-  const total = cart.reduce((s, i) => s + i.qty, 0)
-  const canSubmit = cart.length > 0 && operator.trim() && toId && !submitting
-
-  const handleClick = () => {
-    if (!canSubmit) return
-    onSubmit({ cart, operator: operator.trim(), toId, note })
-  }
-
-  return (
-    <div className="cart-panel" style={{ width: 268, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 78 }}>
-      <div style={{ ...G.card, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ShoppingCart size={16} color="#f97316" />
-          <span style={{ fontWeight: 700, fontSize: 15 }}>進貨清單</span>
-          {total > 0 && (
-            <span style={{ marginLeft: 'auto', fontSize: 12, padding: '2px 10px', borderRadius: 99, background: 'rgba(249,115,22,0.18)', color: '#f97316', fontWeight: 700 }}>
-              {total} 件
-            </span>
-          )}
-        </div>
-
-        {cart.length === 0 ? (
-          <div style={{ fontSize: 13, color: '#475569', textAlign: 'center', padding: '28px 0' }}>
-            點選商品加入清單
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
-            {cart.map(item => (
-              <div key={item.productId} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
-                <span style={{ flex: 1, fontSize: 12, lineHeight: 1.3 }}>{item.productName}</span>
-                <button onClick={() => onQtyChange(item.productId, item.qty - 1)} style={{ ...G.btn, padding: '2px 8px', fontSize: 14, minWidth: 28 }}>−</button>
-                <span style={{ fontSize: 14, fontFamily: 'monospace', minWidth: 22, textAlign: 'center', color: '#f97316', fontWeight: 700 }}>{item.qty}</span>
-                <button onClick={() => onQtyChange(item.productId, item.qty + 1)} style={{ ...G.btn, padding: '2px 8px', fontSize: 14, minWidth: 28 }}>＋</button>
-                <button onClick={() => onRemove(item.productId)} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 14, padding: '2px 4px', lineHeight: 1 }}>✕</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', margin: '2px 0' }} />
-
-        <div>
-          <label style={G.label}>送達地點 *</label>
-          <select value={toId} onChange={e => setToId(e.target.value)} style={G.input}>
-            <option value="">請選擇地點</option>
-            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={G.label}>你的名字 *</label>
-          <input placeholder="操作員工姓名" value={operator} onChange={e => setOperator(e.target.value)} style={G.input} />
-        </div>
-        <div>
-          <label style={G.label}>備註（選填）</label>
-          <input placeholder="例如：緊急補貨" value={note} onChange={e => setNote(e.target.value)} style={G.input} />
-        </div>
-
-        <button
-          onClick={handleClick}
-          disabled={!canSubmit}
-          style={{
-            ...G.btnPrimary, width: '100%', textAlign: 'center',
-            padding: '11px', fontSize: 14,
-            opacity: canSubmit ? 1 : 0.4,
-            cursor: canSubmit ? 'pointer' : 'not-allowed',
-          }}
-        >
-          {submitting ? '送出中...' : '✓ 送出進貨申請'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── 員工主畫面
-function EmployeeView({ products, inventory, locations, cart, setCart, isMobile }) {
-  const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
 
   const warehouseNames = useMemo(
     () => new Set(locations.filter(l => l.type === 'warehouse').map(l => l.name)),
     [locations]
   )
-
   const stockByName = useMemo(() => {
     const map = {}
     inventory.forEach(r => { if (warehouseNames.has(r.location_name)) map[r.product_name] = r })
     return map
   }, [inventory, warehouseNames])
-
   const cartMap = useMemo(() => {
-    const m = {}
-    cart.forEach(i => { m[i.productId] = i.qty })
-    return m
+    const m = {}; cart.forEach(i => { m[i.productId] = i.qty }); return m
   }, [cart])
+
+  const cartTotal = cart.reduce((s, i) => s + i.qty, 0)
+  const canSubmit = cart.length > 0 && operator.trim() && toId && !submitting
 
   const addToCart = (product) => setCart(prev => {
     const ex = prev.find(i => i.productId === product.id)
     if (ex) return prev.map(i => i.productId === product.id ? { ...i, qty: i.qty + 1 } : i)
     return [...prev, { productId: product.id, productName: product.name, qty: 1 }]
   })
-
   const removeOnce = (product) => setCart(prev => {
     const ex = prev.find(i => i.productId === product.id)
     if (!ex) return prev
     if (ex.qty <= 1) return prev.filter(i => i.productId !== product.id)
     return prev.map(i => i.productId === product.id ? { ...i, qty: i.qty - 1 } : i)
   })
-
   const setQty = (productId, qty) => setCart(prev =>
-    qty <= 0
-      ? prev.filter(i => i.productId !== productId)
-      : prev.map(i => i.productId === productId ? { ...i, qty } : i)
+    qty <= 0 ? prev.filter(i => i.productId !== productId)
+             : prev.map(i => i.productId === productId ? { ...i, qty } : i)
   )
 
-  const handleSubmit = async ({ cart, operator, toId, note }) => {
+  const handleSubmit = async () => {
+    if (!canSubmit) return
     setSubmitting(true)
     try {
       const { data: order, error } = await supabase
         .from('purchase_orders')
         .insert({ status: 'pending', operator, note: note || null, to_location: toId })
-        .select()
-        .single()
+        .select().single()
       if (error) throw error
       await supabase.from('purchase_order_items').insert(
         cart.map(i => ({ order_id: order.id, product_id: i.productId, quantity: i.qty }))
       )
-      setCart([])
-      setSubmitted(true)
-      setTimeout(() => setSubmitted(false), 5000)
-    } catch (e) {
-      alert('送出失敗：' + e.message)
-    }
+      setCart([]); setShowSheet(false); setOperator(''); setToId(''); setNote('')
+      setSubmitted(true); setTimeout(() => setSubmitted(false), 5000)
+    } catch (e) { alert('送出失敗：' + e.message) }
     setSubmitting(false)
   }
 
   return (
-    <div className="emp-layout" style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-      <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
-        {submitted && (
-          <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '13px 18px', marginBottom: 16, color: '#10b981', fontSize: 14, fontWeight: 600 }}>
-            ✅ 進貨申請已送出！請等待老闆在老闆端確認。
-          </div>
-        )}
-        <div style={{ fontSize: 12, color: '#475569', marginBottom: 16 }}>
-          點選品項加入清單，{isMobile ? '下方填寫資料後送出' : '填好名字後送出'}
+    <div style={{ paddingBottom: cartTotal > 0 ? 76 : 0 }}>
+      {submitted && (
+        <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '13px 18px', marginBottom: 16, color: '#10b981', fontSize: 14, fontWeight: 600 }}>
+          ✅ 進貨申請已送出！請等待老闆在老闆端確認。
         </div>
-        <div className="prod-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))', gap: 10 }}>
-          {products.map(p => (
-            <ProductCard
-              key={p.id}
-              product={p}
-              cartQty={cartMap[p.id] || 0}
-              onAdd={() => addToCart(p)}
-              onRemove={() => removeOnce(p)}
-              stockInfo={stockByName[p.name]}
-            />
-          ))}
-        </div>
+      )}
+
+      {/* 品項格 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 12 }}>
+        {products.map(p => (
+          <ProductCard key={p.id} product={p} cartQty={cartMap[p.id] || 0}
+            onAdd={() => addToCart(p)} onRemove={() => removeOnce(p)}
+            stockInfo={stockByName[p.name]} />
+        ))}
       </div>
-      <CartPanel
-        cart={cart}
-        onQtyChange={setQty}
-        onRemove={pid => setCart(prev => prev.filter(i => i.productId !== pid))}
-        locations={locations}
-        onSubmit={handleSubmit}
-        submitting={submitting}
-        isMobile={isMobile}
-      />
+
+      {/* 底部 Bar */}
+      {cartTotal > 0 && (
+        <div onClick={() => setShowSheet(true)} style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'linear-gradient(135deg,#f97316,#ea580c)', padding: '14px 20px', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 -4px 20px rgba(249,115,22,0.4)', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff' }}>{cartTotal}</div>
+            <span style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>已選 {cartTotal} 項</span>
+          </div>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>查看清單 →</span>
+        </div>
+      )}
+
+      {/* 結帳抽屜 */}
+      {showSheet && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+          <div onClick={() => setShowSheet(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#151b27', borderRadius: '20px 20px 0 0', padding: '16px 20px 36px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ width: 36, height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 99, margin: '0 auto 18px' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <span style={{ fontSize: 16, fontWeight: 700 }}>進貨清單</span>
+              <span style={{ fontSize: 13, color: '#f97316', fontWeight: 600 }}>{cartTotal} 項</span>
+            </div>
+            {/* 品項列表 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              {cart.map(item => (
+                <div key={item.productId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 10 }}>
+                  <span style={{ flex: 1, fontSize: 13 }}>{item.productName}</span>
+                  <button onClick={() => setQty(item.productId, item.qty - 1)} style={{ ...G.btn, padding: '3px 10px', fontSize: 15, minWidth: 30 }}>−</button>
+                  <span style={{ fontSize: 15, fontFamily: 'monospace', minWidth: 24, textAlign: 'center', color: '#f97316', fontWeight: 700 }}>{item.qty}</span>
+                  <button onClick={() => setQty(item.productId, item.qty + 1)} style={{ ...G.btn, padding: '3px 10px', fontSize: 15, minWidth: 30 }}>＋</button>
+                  <button onClick={() => setCart(prev => prev.filter(i => i.productId !== item.productId))} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 16, padding: '3px 6px' }}>✕</button>
+                </div>
+              ))}
+            </div>
+            <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', margin: '0 0 14px' }} />
+            {/* 表單 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={G.label}>送達地點 *</label>
+                <select value={toId} onChange={e => setToId(e.target.value)} style={G.input}>
+                  <option value="">請選擇地點</option>
+                  {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={G.label}>你的名字 *</label>
+                <input placeholder="操作員工姓名" value={operator} onChange={e => setOperator(e.target.value)} style={G.input} />
+              </div>
+              <div>
+                <label style={G.label}>備註（選填）</label>
+                <input placeholder="例如：緊急補貨" value={note} onChange={e => setNote(e.target.value)} style={G.input} />
+              </div>
+              <button onClick={handleSubmit} disabled={!canSubmit} style={{ ...G.btnPrimary, width: '100%', textAlign: 'center', padding: 14, fontSize: 15, opacity: canSubmit ? 1 : 0.4, cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
+                {submitting ? '送出中...' : '✓ 送出進貨申請'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -705,8 +675,6 @@ export default function App() {
           .hdr-new-text{display:none!important;}
           .main-cnt{padding:14px 12px!important;}
           .stats-grid{grid-template-columns:repeat(2,1fr)!important;}
-          .emp-layout{flex-direction:column!important;}
-          .cart-panel{width:100%!important;position:static!important;}
           .breakdown-grid{grid-template-columns:1fr!important;}
         }
       `}</style>
@@ -776,7 +744,6 @@ export default function App() {
             locations={locations}
             cart={cart}
             setCart={setCart}
-            isMobile={isMobile}
           />
         )}
 
