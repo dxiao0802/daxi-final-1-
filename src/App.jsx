@@ -88,7 +88,7 @@ function StoreBreakdown({ productName, matrix, locations }) {
 
   return (
     <div style={{ animation: 'expandRow .2s ease', background: 'rgba(255,255,255,0.015)', borderTop: '1px solid rgba(255,255,255,0.05)', padding: '18px 20px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24 }}>
+      <div className="breakdown-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24 }}>
         <div>
           <div style={{ fontSize: 11, color: '#64748b', marginBottom: 12, letterSpacing: '.08em' }}>各分店庫存水位</div>
           {locations.map(loc => {
@@ -257,7 +257,7 @@ function CartPanel({ cart, onQtyChange, onRemove, locations, onSubmit, submittin
   }
 
   return (
-    <div style={{ width: isMobile ? '100%' : 268, flexShrink: 0, alignSelf: 'flex-start', position: isMobile ? 'static' : 'sticky', top: 78 }}>
+    <div className="cart-panel" style={{ width: 268, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 78 }}>
       <div style={{ ...G.card, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <ShoppingCart size={16} color="#f97316" />
@@ -385,7 +385,7 @@ function EmployeeView({ products, inventory, locations, cart, setCart, isMobile 
   }
 
   return (
-    <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row' }}>
+    <div className="emp-layout" style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
       <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
         {submitted && (
           <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '13px 18px', marginBottom: 16, color: '#10b981', fontSize: 14, fontWeight: 600 }}>
@@ -395,7 +395,7 @@ function EmployeeView({ products, inventory, locations, cart, setCart, isMobile 
         <div style={{ fontSize: 12, color: '#475569', marginBottom: 16 }}>
           點選品項加入清單，{isMobile ? '下方填寫資料後送出' : '填好名字後送出'}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '140px' : '158px'}, 1fr))`, gap: 10 }}>
+        <div className="prod-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))', gap: 10 }}>
           {products.map(p => (
             <ProductCard
               key={p.id}
@@ -695,42 +695,56 @@ export default function App() {
         select option{background:#151b27}
         ::-webkit-scrollbar{width:4px;height:4px}
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:99px}
+        @media(max-width:767px){
+          .hdr{height:auto!important;padding:8px 12px!important;flex-wrap:wrap!important;gap:8px!important;}
+          .hdr-logo{flex:1!important;}
+          .hdr-sub{display:none!important;}
+          .hdr-mode-text{display:none!important;}
+          .hdr-right-boss{flex:1 0 100%!important;justify-content:space-between!important;}
+          .hdr-time-txt{display:none!important;}
+          .hdr-new-text{display:none!important;}
+          .main-cnt{padding:14px 12px!important;}
+          .stats-grid{grid-template-columns:repeat(2,1fr)!important;}
+          .emp-layout{flex-direction:column!important;}
+          .cart-panel{width:100%!important;position:static!important;}
+          .breakdown-grid{grid-template-columns:1fr!important;}
+        }
       `}</style>
 
       {/* HEADER */}
-      <header style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: isMobile ? '8px 14px' : '0 28px', height: isMobile ? 'auto' : 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(13,17,23,0.98)', position: 'sticky', top: 0, zIndex: 50, flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? 8 : 0 }}>
+      <header className="hdr" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 28px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(13,17,23,0.98)', position: 'sticky', top: 0, zIndex: 50 }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: isMobile ? '1' : '0 0 auto' }}>
+        <div className="hdr-logo" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#f97316,#ea580c)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>🏪</div>
           <div>
-            <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 700 }}>大西庫存管理系統</div>
-            {!isMobile && <div style={{ fontSize: 9, color: '#475569', letterSpacing: '.1em' }}>DAXI INVENTORY</div>}
+            <div style={{ fontSize: 14, fontWeight: 700 }}>大西庫存管理系統</div>
+            <div className="hdr-sub" style={{ fontSize: 9, color: '#475569', letterSpacing: '.1em' }}>DAXI INVENTORY</div>
           </div>
         </div>
 
         {/* 模式切換 */}
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, gap: 2, flex: '0 0 auto' }}>
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, gap: 2, flexShrink: 0 }}>
           <button onClick={() => { setMode('employee'); setBossUnlocked(false) }} style={{
-            padding: isMobile ? '5px 10px' : '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+            padding: '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
             background: mode === 'employee' ? 'rgba(249,115,22,0.2)' : 'transparent',
             border: `1px solid ${mode === 'employee' ? '#f97316' : 'transparent'}`,
             color: mode === 'employee' ? '#f97316' : '#64748b', transition: 'all .15s',
-          }}>{isMobile ? '📦' : '📦 員工進貨'}</button>
+          }}>📦 <span className="hdr-mode-text">員工進貨</span></button>
           <button onClick={() => bossUnlocked ? setMode('boss') : setShowPinModal(true)} style={{
-            padding: isMobile ? '5px 10px' : '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+            padding: '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
             background: mode === 'boss' ? 'rgba(249,115,22,0.2)' : 'transparent',
             border: `1px solid ${mode === 'boss' ? '#f97316' : 'transparent'}`,
             color: mode === 'boss' ? '#f97316' : '#64748b', transition: 'all .15s',
-          }}>{isMobile ? '🔒' : '🔒 老闆端'}</button>
+          }}>🔒 <span className="hdr-mode-text">老闆端</span></button>
         </div>
 
         {/* 右側按鈕 / 老闆 tabs */}
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', ...(isMobile && mode === 'boss' && { width: '100%', justifyContent: 'space-between' }) }}>
+        <div className={`hdr-right${mode === 'boss' ? ' hdr-right-boss' : ''}`} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {mode === 'boss' && (
-            <nav style={{ display: 'flex', gap: 4, overflowX: 'auto', flex: isMobile ? 1 : 'none', marginRight: isMobile ? 0 : 8 }}>
-              {[['overview', isMobile ? '📦' : '📦 庫存總覽'], ['tx', isMobile ? '🔄' : '🔄 異動紀錄'], ['orders', isMobile ? '📋' : '📋 進貨申請']].map(([t, l]) => (
+            <nav style={{ display: 'flex', gap: 4, overflowX: 'auto', marginRight: 8 }}>
+              {[['overview', '📦', '庫存總覽'], ['tx', '🔄', '異動紀錄'], ['orders', '📋', '進貨申請']].map(([t, icon, label]) => (
                 <button key={t} onClick={() => setTab(t)} style={tabStyle(t)}>
-                  {l}
+                  {icon} <span className="hdr-mode-text">{label}</span>
                   {t === 'orders' && pendingCount > 0 && (
                     <span style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 99, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {pendingCount}
@@ -742,17 +756,17 @@ export default function App() {
           )}
           <button onClick={load} disabled={loading} style={{ ...G.btn, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, flexShrink: 0 }}>
             <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-            {!isMobile && (lastFetch ? lastFetch.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '更新')}
+            <span className="hdr-time-txt">{lastFetch ? lastFetch.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '更新'}</span>
           </button>
           {mode === 'boss' && (
-            <button onClick={() => setShowTxModal(true)} style={{ ...G.btnPrimary, flexShrink: 0, padding: isMobile ? '7px 12px' : '8px 18px' }}>
-              {isMobile ? '＋' : '＋ 新增異動'}
+            <button onClick={() => setShowTxModal(true)} style={{ ...G.btnPrimary, flexShrink: 0 }}>
+              ＋ <span className="hdr-new-text">新增異動</span>
             </button>
           )}
         </div>
       </header>
 
-      <main style={{ padding: isMobile ? '14px 12px' : '22px 28px', maxWidth: 1300, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <main className="main-cnt" style={{ padding: '22px 28px', maxWidth: 1300, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* ══ 員工端 */}
         {mode === 'employee' && (
@@ -770,7 +784,7 @@ export default function App() {
         {mode === 'boss' && (
           <>
             {/* 統計卡 */}
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : 4},1fr)`, gap: 10 }}>
+            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
               {[
                 { label: '品項數', value: products.length, color: '#3b82f6' },
                 { label: '分店數', value: locations.length, color: '#8b5cf6' },
