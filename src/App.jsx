@@ -238,7 +238,6 @@ function CartPanel({ cart, onQtyChange, onRemove, locations, onSubmit, submittin
   const [operator, setOperator] = useState('')
   const [toId, setToId] = useState('')
   const [note, setNote] = useState('')
-  const warehouses = locations.filter(l => l.type === 'warehouse')
   const total = cart.reduce((s, i) => s + i.qty, 0)
   const canSubmit = cart.length > 0 && operator.trim() && toId && !submitting
 
@@ -281,10 +280,10 @@ function CartPanel({ cart, onQtyChange, onRemove, locations, onSubmit, submittin
         <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', margin: '2px 0' }} />
 
         <div>
-          <label style={G.label}>進貨至 *</label>
+          <label style={G.label}>送達地點 *</label>
           <select value={toId} onChange={e => setToId(e.target.value)} style={G.input}>
-            <option value="">請選擇倉庫</option>
-            {warehouses.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            <option value="">請選擇地點</option>
+            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         </div>
         <div>

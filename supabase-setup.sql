@@ -87,6 +87,13 @@ ALTER TABLE transactions        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE purchase_orders     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE purchase_order_items ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "allow_all" ON locations;
+DROP POLICY IF EXISTS "allow_all" ON products;
+DROP POLICY IF EXISTS "allow_all" ON inventory;
+DROP POLICY IF EXISTS "allow_all" ON transactions;
+DROP POLICY IF EXISTS "allow_all" ON purchase_orders;
+DROP POLICY IF EXISTS "allow_all" ON purchase_order_items;
+
 CREATE POLICY "allow_all" ON locations            FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON products             FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON inventory            FOR ALL USING (true) WITH CHECK (true);
