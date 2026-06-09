@@ -323,6 +323,37 @@ function TxModal({ onClose, onSubmit, locations, products }) {
 
 const CARD_COLORS = ['#f97316','#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16','#a855f7']
 
+// 品項中越對照
+const PRODUCT_VI = {
+  '大腸':         'Lòng heo',
+  '魷魚':         'Mực',
+  '蚵仔':         'Hàu',
+  '麵線':         'Mì sợi',
+  '750 杯':       'Ly 750',
+  '750 蓋':       'Nắp 750',
+  '520 杯':       'Ly 520',
+  '520 蓋':       'Nắp 520',
+  '390 杯':       'Ly 390',
+  '390 蓋':       'Nắp 390',
+  '雞排':         'Gà chiên',
+  '雞翅':         'Cánh gà',
+  '豆付':         'Đậu hũ',
+  '泡菜':         'Kim chi',
+  '8 兩紙袋':     'Túi giấy 8 lạng',
+  '6 兩紙袋':     'Túi giấy 6 lạng',
+  '4 兩紙袋':     'Túi giấy 4 lạng',
+  '西瓜汁':       'Nước dưa hấu',
+  '冰塊':         'Đá viên',
+  '蔬菜泥':       'Rau xay',
+  '豬血糕醬':     'Sốt tiết hấp',
+  '大豬':         'Heo lớn',
+  '小豬':         'Heo nhỏ',
+  '透明大麵線袋': 'Túi mì lớn',
+  '一袋杯紅':     'Túi ly đỏ',
+  '購物袋':       'Túi xách',
+  '香菜':         'Ngò rí',
+}
+
 // ── 員工：商品卡片
 function ProductCard({ product, cartQty, onAdd, onRemove, stockInfo }) {
   const lang = useLang()
@@ -330,6 +361,7 @@ function ProductCard({ product, cartQty, onAdd, onRemove, stockInfo }) {
   const color = CARD_COLORS[product.name.charCodeAt(0) % CARD_COLORS.length]
   const pct = stockInfo ? Math.min(100, Math.round(stockInfo.quantity / (stockInfo.threshold || 1) * 100)) : null
   const st = pct !== null ? getStatus(pct) : null
+  const viName = PRODUCT_VI[product.name]
 
   return (
     <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -343,8 +375,9 @@ function ProductCard({ product, cartQty, onAdd, onRemove, stockInfo }) {
           {product.name.slice(0, 2)}
         </div>
       </div>
-      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, padding: '0 10px 4px', lineHeight: 1.4, color: '#f1f5f9' }}>
-        {product.name}
+      <div style={{ textAlign: 'center', padding: '0 10px 4px', lineHeight: 1.4 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>{product.name}</div>
+        {viName && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{viName}</div>}
       </div>
       <div style={{ textAlign: 'center', fontSize: 11, color: '#475569', paddingBottom: 12 }}>
         {stockInfo ? `${t.stockLabel} ${stockInfo.quantity}${stockInfo.unit}` : t.notSet}
