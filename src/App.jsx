@@ -16,6 +16,16 @@ const STORE_COLORS = {
   '石牌分店': '#8b5cf6', '旗艦分店': '#10b981',
 }
 
+function useIsMobile() {
+  const [v, setV] = useState(() => window.innerWidth < 768)
+  useEffect(() => {
+    const fn = () => setV(window.innerWidth < 768)
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
+  return v
+}
+
 function getStatus(pct) {
   if (pct < 40) return { label: '嚴重不足', color: '#ef4444', bg: 'rgba(239,68,68,0.12)', pulse: true }
   if (pct < 75) return { label: '庫存偏低', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', pulse: false }
@@ -78,7 +88,7 @@ function StoreBreakdown({ productName, matrix, locations }) {
 
   return (
     <div style={{ animation: 'expandRow .2s ease', background: 'rgba(255,255,255,0.015)', borderTop: '1px solid rgba(255,255,255,0.05)', padding: '18px 20px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24 }}>
         <div>
           <div style={{ fontSize: 11, color: '#64748b', marginBottom: 12, letterSpacing: '.08em' }}>各分店庫存水位</div>
           {locations.map(loc => {
@@ -234,7 +244,7 @@ function ProductCard({ product, cartQty, onAdd, onRemove, stockInfo }) {
 }
 
 // ── 員工：購物車面板
-function CartPanel({ cart, onQtyChange, onRemove, locations, onSubmit, submitting }) {
+function CartPanel({ cart, onQtyChange, onRemove, locations, onSubmit, submitting, isMobile }) {
   const [operator, setOperator] = useState('')
   const [toId, setToId] = useState('')
   const [note, setNote] = useState('')
@@ -247,7 +257,7 @@ function CartPanel({ cart, onQtyChange, onRemove, locations, onSubmit, submittin
   }
 
   return (
-    <div style={{ width: 268, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 78 }}>
+    <div style={{ width: isMobile ? '100%' : 268, flexShrink: 0, alignSelf: 'flex-start', position: isMobile ? 'static' : 'sticky', top: 78 }}>
       <div style={{ ...G.card, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <ShoppingCart size={16} color="#f97316" />
@@ -313,7 +323,7 @@ function CartPanel({ cart, onQtyChange, onRemove, locations, onSubmit, submittin
 }
 
 // ── 員工主畫面
-function EmployeeView({ products, inventory, locations, cart, setCart }) {
+function EmployeeView({ products, inventory, locations, cart, setCart, isMobile }) {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
@@ -375,17 +385,17 @@ function EmployeeView({ products, inventory, locations, cart, setCart }) {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
+    <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row' }}>
+      <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
         {submitted && (
           <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '13px 18px', marginBottom: 16, color: '#10b981', fontSize: 14, fontWeight: 600 }}>
             ✅ 進貨申請已送出！請等待老闆在老闆端確認。
           </div>
         )}
         <div style={{ fontSize: 12, color: '#475569', marginBottom: 16 }}>
-          點選品項的「加入」按鈕，加入右側清單，填好名字後送出
+          點選品項加入清單，{isMobile ? '下方填寫資料後送出' : '填好名字後送出'}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '140px' : '158px'}, 1fr))`, gap: 10 }}>
           {products.map(p => (
             <ProductCard
               key={p.id}
@@ -405,6 +415,7 @@ function EmployeeView({ products, inventory, locations, cart, setCart }) {
         locations={locations}
         onSubmit={handleSubmit}
         submitting={submitting}
+        isMobile={isMobile}
       />
     </div>
   )
@@ -546,6 +557,7 @@ function PinModal({ onClose, onSuccess }) {
 
 // ── MAIN
 export default function App() {
+  const isMobile = useIsMobile()
   const [mode, setMode] = useState('employee')
   const [bossUnlocked, setBossUnlocked] = useState(false)
   const [showPinModal, setShowPinModal] = useState(false)
@@ -686,39 +698,37 @@ export default function App() {
       `}</style>
 
       {/* HEADER */}
-      <header style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 28px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(13,17,23,0.98)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: isMobile ? '8px 14px' : '0 28px', height: isMobile ? 'auto' : 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(13,17,23,0.98)', position: 'sticky', top: 0, zIndex: 50, flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? 8 : 0 }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: 'linear-gradient(135deg,#f97316,#ea580c)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🏪</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: isMobile ? '1' : '0 0 auto' }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#f97316,#ea580c)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>🏪</div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>大西庫存管理系統</div>
-            <div style={{ fontSize: 9, color: '#475569', letterSpacing: '.1em' }}>DAXI INVENTORY</div>
+            <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 700 }}>大西庫存管理系統</div>
+            {!isMobile && <div style={{ fontSize: 9, color: '#475569', letterSpacing: '.1em' }}>DAXI INVENTORY</div>}
           </div>
         </div>
 
         {/* 模式切換 */}
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, gap: 2 }}>
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, gap: 2, flex: '0 0 auto' }}>
           <button onClick={() => { setMode('employee'); setBossUnlocked(false) }} style={{
-            padding: '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+            padding: isMobile ? '5px 10px' : '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
             background: mode === 'employee' ? 'rgba(249,115,22,0.2)' : 'transparent',
             border: `1px solid ${mode === 'employee' ? '#f97316' : 'transparent'}`,
-            color: mode === 'employee' ? '#f97316' : '#64748b',
-            transition: 'all .15s',
-          }}>📦 員工進貨</button>
+            color: mode === 'employee' ? '#f97316' : '#64748b', transition: 'all .15s',
+          }}>{isMobile ? '📦' : '📦 員工進貨'}</button>
           <button onClick={() => bossUnlocked ? setMode('boss') : setShowPinModal(true)} style={{
-            padding: '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+            padding: isMobile ? '5px 10px' : '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
             background: mode === 'boss' ? 'rgba(249,115,22,0.2)' : 'transparent',
             border: `1px solid ${mode === 'boss' ? '#f97316' : 'transparent'}`,
-            color: mode === 'boss' ? '#f97316' : '#64748b',
-            transition: 'all .15s',
-          }}>🔒 老闆端</button>
+            color: mode === 'boss' ? '#f97316' : '#64748b', transition: 'all .15s',
+          }}>{isMobile ? '🔒' : '🔒 老闆端'}</button>
         </div>
 
-        {/* 右側按鈕 */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        {/* 右側按鈕 / 老闆 tabs */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', ...(isMobile && mode === 'boss' && { width: '100%', justifyContent: 'space-between' }) }}>
           {mode === 'boss' && (
-            <nav style={{ display: 'flex', gap: 4, marginRight: 8 }}>
-              {[['overview', '📦 庫存總覽'], ['tx', '🔄 異動紀錄'], ['orders', '📋 進貨申請']].map(([t, l]) => (
+            <nav style={{ display: 'flex', gap: 4, overflowX: 'auto', flex: isMobile ? 1 : 'none', marginRight: isMobile ? 0 : 8 }}>
+              {[['overview', isMobile ? '📦' : '📦 庫存總覽'], ['tx', isMobile ? '🔄' : '🔄 異動紀錄'], ['orders', isMobile ? '📋' : '📋 進貨申請']].map(([t, l]) => (
                 <button key={t} onClick={() => setTab(t)} style={tabStyle(t)}>
                   {l}
                   {t === 'orders' && pendingCount > 0 && (
@@ -730,17 +740,19 @@ export default function App() {
               ))}
             </nav>
           )}
-          <button onClick={load} disabled={loading} style={{ ...G.btn, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+          <button onClick={load} disabled={loading} style={{ ...G.btn, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, flexShrink: 0 }}>
             <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-            {lastFetch ? lastFetch.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '更新'}
+            {!isMobile && (lastFetch ? lastFetch.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '更新')}
           </button>
           {mode === 'boss' && (
-            <button onClick={() => setShowTxModal(true)} style={G.btnPrimary}>＋ 新增異動</button>
+            <button onClick={() => setShowTxModal(true)} style={{ ...G.btnPrimary, flexShrink: 0, padding: isMobile ? '7px 12px' : '8px 18px' }}>
+              {isMobile ? '＋' : '＋ 新增異動'}
+            </button>
           )}
         </div>
       </header>
 
-      <main style={{ padding: '22px 28px', maxWidth: 1300, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <main style={{ padding: isMobile ? '14px 12px' : '22px 28px', maxWidth: 1300, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* ══ 員工端 */}
         {mode === 'employee' && (
@@ -750,6 +762,7 @@ export default function App() {
             locations={locations}
             cart={cart}
             setCart={setCart}
+            isMobile={isMobile}
           />
         )}
 
@@ -757,7 +770,7 @@ export default function App() {
         {mode === 'boss' && (
           <>
             {/* 統計卡 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isMobile ? 2 : 4},1fr)`, gap: 10 }}>
               {[
                 { label: '品項數', value: products.length, color: '#3b82f6' },
                 { label: '分店數', value: locations.length, color: '#8b5cf6' },
