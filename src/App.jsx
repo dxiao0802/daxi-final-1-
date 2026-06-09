@@ -503,9 +503,53 @@ function PurchaseOrdersTab({ orders, onApprove, onReject }) {
   )
 }
 
+// ── 老闆密碼 Modal
+function PinModal({ onClose, onSuccess }) {
+  const [pin, setPin] = useState('')
+  const [error, setError] = useState(false)
+
+  const check = () => {
+    if (pin === (import.meta.env.VITE_BOSS_PIN || '1234')) {
+      onSuccess()
+    } else {
+      setError(true)
+      setPin('')
+      setTimeout(() => setError(false), 800)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: '#151b27', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: 32, width: 300, boxShadow: '0 24px 60px rgba(0,0,0,0.5)', animation: error ? 'shakeX .4s ease' : 'none' }}>
+        <div style={{ textAlign: 'center', marginBottom: 22 }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>🔒</div>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>老闆端密碼</div>
+          <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>輸入密碼進入管理介面</div>
+        </div>
+        <input
+          type="password"
+          placeholder="••••"
+          value={pin}
+          onChange={e => { setPin(e.target.value); setError(false) }}
+          onKeyDown={e => e.key === 'Enter' && check()}
+          autoFocus
+          style={{ ...G.input, textAlign: 'center', fontSize: 22, letterSpacing: '0.4em', marginBottom: error ? 4 : 14, border: error ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.1)' }}
+        />
+        {error && <div style={{ fontSize: 12, color: '#ef4444', textAlign: 'center', marginBottom: 10 }}>密碼錯誤，請再試一次</div>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onClose} style={{ ...G.btn, flex: 1 }}>取消</button>
+          <button onClick={check} style={{ ...G.btnPrimary, flex: 1 }}>確認</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── MAIN
 export default function App() {
-  const [mode, setMode] = useState('boss')
+  const [mode, setMode] = useState('employee')
+  const [bossUnlocked, setBossUnlocked] = useState(false)
+  const [showPinModal, setShowPinModal] = useState(false)
   const [tab, setTab] = useState('overview')
   const [loading, setLoading] = useState(true)
   const [locations, setLocations] = useState([])
@@ -634,6 +678,7 @@ export default function App() {
         @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
         @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
         @keyframes expandRow{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes shakeX{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
         tbody tr:hover td{background:rgba(255,255,255,0.02)!important}
         input:focus,select:focus{border-color:rgba(249,115,22,.5)!important}
         select option{background:#151b27}
@@ -654,17 +699,20 @@ export default function App() {
 
         {/* 模式切換 */}
         <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, gap: 2 }}>
-          {[['boss', '👔 老闆端'], ['employee', '📦 員工進貨']].map(([m, label]) => (
-            <button key={m} onClick={() => setMode(m)} style={{
-              padding: '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-              background: mode === m ? 'rgba(249,115,22,0.2)' : 'transparent',
-              border: `1px solid ${mode === m ? '#f97316' : 'transparent'}`,
-              color: mode === m ? '#f97316' : '#64748b',
-              transition: 'all .15s',
-            }}>
-              {label}
-            </button>
-          ))}
+          <button onClick={() => { setMode('employee'); setBossUnlocked(false) }} style={{
+            padding: '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+            background: mode === 'employee' ? 'rgba(249,115,22,0.2)' : 'transparent',
+            border: `1px solid ${mode === 'employee' ? '#f97316' : 'transparent'}`,
+            color: mode === 'employee' ? '#f97316' : '#64748b',
+            transition: 'all .15s',
+          }}>📦 員工進貨</button>
+          <button onClick={() => bossUnlocked ? setMode('boss') : setShowPinModal(true)} style={{
+            padding: '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+            background: mode === 'boss' ? 'rgba(249,115,22,0.2)' : 'transparent',
+            border: `1px solid ${mode === 'boss' ? '#f97316' : 'transparent'}`,
+            color: mode === 'boss' ? '#f97316' : '#64748b',
+            transition: 'all .15s',
+          }}>🔒 老闆端</button>
         </div>
 
         {/* 右側按鈕 */}
@@ -846,6 +894,12 @@ export default function App() {
 
       {showTxModal && (
         <TxModal onClose={() => setShowTxModal(false)} onSubmit={handleTxSubmit} locations={locations} products={products} />
+      )}
+      {showPinModal && (
+        <PinModal
+          onClose={() => setShowPinModal(false)}
+          onSuccess={() => { setBossUnlocked(true); setMode('boss'); setShowPinModal(false) }}
+        />
       )}
     </div>
   )

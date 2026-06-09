@@ -106,29 +106,44 @@ INSERT INTO locations (name, type) VALUES
   ('旗艦分店', 'branch')
 ON CONFLICT (name) DO NOTHING;
 
--- 品項
+-- 品項（27 項）
 INSERT INTO products (name, unit) VALUES
-  ('紙杯', '個'),
-  ('麵線', '包'),
-  ('大腸', '條'),
-  ('蒜頭', '顆'),
-  ('蚵仔', '斤')
+  ('大腸',         '包'),
+  ('魷魚',         '包'),
+  ('蚵仔',         '包'),
+  ('麵線',         '袋'),
+  ('750 杯',       '箱'),
+  ('750 蓋',       '箱'),
+  ('520 杯',       '箱'),
+  ('520 蓋',       '箱'),
+  ('390 杯',       '箱'),
+  ('390 蓋',       '箱'),
+  ('雞排',         '箱'),
+  ('雞翅',         '箱'),
+  ('豆付',         '盤'),
+  ('泡菜',         '袋'),
+  ('8 兩紙袋',     '箱'),
+  ('6 兩紙袋',     '箱'),
+  ('4 兩紙袋',     '箱'),
+  ('西瓜汁',       '杯'),
+  ('冰塊',         '包'),
+  ('蔬菜泥',       '包'),
+  ('豬血糕醬',     '袋'),
+  ('大豬',         '隻'),
+  ('小豬',         '隻'),
+  ('透明大麵線袋', '個'),
+  ('一袋杯紅',     '個'),
+  ('購物袋',       '個'),
+  ('香菜',         '份')
 ON CONFLICT (name) DO NOTHING;
 
--- 庫存（各分店初始數量，刻意製造一些低庫存警示）
+-- 庫存初始化（全部 0，老闆用「新增異動 → 進貨入倉」補貨）
+-- threshold 暫設預設值，之後可直接在 Supabase 修改
 INSERT INTO inventory (location_id, product_id, quantity, threshold)
 SELECT
   l.id,
   p.id,
-  CASE l.name
-    WHEN '大西倉庫' THEN CASE p.name WHEN '紙杯' THEN 500 WHEN '麵線' THEN 80 WHEN '大腸' THEN 60 WHEN '蒜頭' THEN 200 WHEN '蚵仔' THEN 30 END
-    WHEN '士捷分店' THEN CASE p.name WHEN '紙杯' THEN 120 WHEN '麵線' THEN 15 WHEN '大腸' THEN 8  WHEN '蒜頭' THEN 45  WHEN '蚵仔' THEN 5  END
-    WHEN '石牌分店' THEN CASE p.name WHEN '紙杯' THEN 60  WHEN '麵線' THEN 5  WHEN '大腸' THEN 12 WHEN '蒜頭' THEN 20  WHEN '蚵仔' THEN 2  END
-    WHEN '旗艦分店' THEN CASE p.name WHEN '紙杯' THEN 300 WHEN '麵線' THEN 25 WHEN '大腸' THEN 18 WHEN '蒜頭' THEN 80  WHEN '蚵仔' THEN 8  END
-  END AS quantity,
-  CASE l.type
-    WHEN 'warehouse' THEN CASE p.name WHEN '紙杯' THEN 200 WHEN '麵線' THEN 30 WHEN '大腸' THEN 20 WHEN '蒜頭' THEN 80 WHEN '蚵仔' THEN 10 END
-    ELSE                   CASE p.name WHEN '紙杯' THEN 100 WHEN '麵線' THEN 10 WHEN '大腸' THEN 10 WHEN '蒜頭' THEN 30 WHEN '蚵仔' THEN 5  END
-  END AS threshold
+  0,
+  CASE l.type WHEN 'warehouse' THEN 10 ELSE 5 END
 FROM locations l, products p
 ON CONFLICT (location_id, product_id) DO NOTHING;
