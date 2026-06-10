@@ -71,6 +71,18 @@ const T = {
     submitFail: '送出失敗：',
     approveNote: (op) => `進貨申請核准（申請人：${op}）`,
     langBtn: 'Tiếng Việt',
+    kitchenMode: '廚房端',
+    kitchenPinTitle: '廚房端密碼', kitchenPinSub: '輸入密碼進入廚房回報介面',
+    usageLocation: '你在哪個地點？ *', usageSelectLoc: '請選擇地點',
+    usageBtn: '使用了',
+    usageViewCart: '查看使用清單 →',
+    usageCount: (n) => `已選 ${n} 項`,
+    usageList: '使用清單',
+    usageYourName: '你的名字 *', usageNamePh: '廚房人員姓名',
+    usageNoteOptional: '備註（選填）', usageNotePh: '例如：今日備料',
+    usageSubmitting: '送出中...', usageSubmitBtn: '✓ 送出使用回報',
+    usageSuccess: '✅ 使用量已回報，庫存已更新！',
+    usageSubmitFail: '送出失敗：',
   },
   vi: {
     appName: 'Kho Đại Tây',
@@ -122,6 +134,18 @@ const T = {
     submitFail: 'Gửi thất bại:',
     approveNote: (op) => `Duyệt yêu cầu nhập hàng (người nộp: ${op})`,
     langBtn: '中文',
+    kitchenMode: 'Bếp',
+    kitchenPinTitle: 'Mật khẩu bếp', kitchenPinSub: 'Nhập mật khẩu để vào báo cáo bếp',
+    usageLocation: 'Bạn đang ở đâu? *', usageSelectLoc: 'Chọn địa điểm',
+    usageBtn: 'Đã dùng',
+    usageViewCart: 'Xem danh sách →',
+    usageCount: (n) => `Đã chọn ${n} món`,
+    usageList: 'Danh sách đã dùng',
+    usageYourName: 'Tên của bạn *', usageNamePh: 'Tên nhân viên bếp',
+    usageNoteOptional: 'Ghi chú (tuỳ chọn)', usageNotePh: 'Ví dụ: Chuẩn bị nguyên liệu',
+    usageSubmitting: 'Đang gửi...', usageSubmitBtn: '✓ Gửi báo cáo',
+    usageSuccess: '✅ Đã báo cáo! Kho đã cập nhật.',
+    usageSubmitFail: 'Gửi thất bại:',
   }
 }
 
@@ -355,7 +379,7 @@ const PRODUCT_VI = {
 }
 
 // ── 員工：商品卡片
-function ProductCard({ product, cartQty, onAdd, onRemove, stockInfo }) {
+function ProductCard({ product, cartQty, onAdd, onRemove, stockInfo, addLabel, accentColor }) {
   const lang = useLang()
   const t = T[lang]
   const color = CARD_COLORS[product.name.charCodeAt(0) % CARD_COLORS.length]
@@ -384,13 +408,13 @@ function ProductCard({ product, cartQty, onAdd, onRemove, stockInfo }) {
       </div>
       <div style={{ marginTop: 'auto' }}>
         {cartQty === 0 ? (
-          <button onClick={onAdd} style={{ width: '100%', background: color, color: '#fff', border: 'none', padding: '11px', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-            <Plus size={14} /> {t.addBtn}
+          <button onClick={onAdd} style={{ width: '100%', background: accentColor || color, color: '#fff', border: 'none', padding: '11px', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <Plus size={14} /> {addLabel || t.addBtn}
           </button>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <button onClick={onRemove} style={{ flex: 1, padding: '10px', fontSize: 18, background: 'none', border: 'none', color: '#f1f5f9', cursor: 'pointer', lineHeight: 1 }}>−</button>
-            <span style={{ fontSize: 17, fontWeight: 700, color, minWidth: 32, textAlign: 'center', fontFamily: 'monospace' }}>{cartQty}</span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: accentColor || color, minWidth: 32, textAlign: 'center', fontFamily: 'monospace' }}>{cartQty}</span>
             <button onClick={onAdd} style={{ flex: 1, padding: '10px', fontSize: 18, background: 'none', border: 'none', color: '#f1f5f9', cursor: 'pointer', lineHeight: 1 }}>＋</button>
           </div>
         )}
@@ -536,6 +560,155 @@ function EmployeeView({ products, inventory, locations, cart, setCart }) {
   )
 }
 
+// ── 廚房：使用回報
+const KITCHEN_ACCENT = '#8b5cf6'
+
+function KitchenView({ products, inventory, locations, cart, setCart }) {
+  const lang = useLang()
+  const t = T[lang]
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [showSheet, setShowSheet] = useState(false)
+  const [operator, setOperator] = useState('')
+  const [fromId, setFromId] = useState('')
+  const [note, setNote] = useState('')
+
+  const selectedLoc = locations.find(l => l.id === fromId)
+
+  const stockByName = useMemo(() => {
+    if (!selectedLoc) return {}
+    const map = {}
+    inventory.forEach(r => { if (r.location_name === selectedLoc.name) map[r.product_name] = r })
+    return map
+  }, [inventory, selectedLoc])
+
+  const cartMap = useMemo(() => {
+    const m = {}; cart.forEach(i => { m[i.productId] = i.qty }); return m
+  }, [cart])
+
+  const cartTotal = cart.reduce((s, i) => s + i.qty, 0)
+  const canSubmit = cart.length > 0 && operator.trim() && fromId && !submitting
+
+  const addToCart = (product) => setCart(prev => {
+    const ex = prev.find(i => i.productId === product.id)
+    if (ex) return prev.map(i => i.productId === product.id ? { ...i, qty: i.qty + 1 } : i)
+    return [...prev, { productId: product.id, productName: product.name, qty: 1 }]
+  })
+  const removeOnce = (product) => setCart(prev => {
+    const ex = prev.find(i => i.productId === product.id)
+    if (!ex) return prev
+    if (ex.qty <= 1) return prev.filter(i => i.productId !== product.id)
+    return prev.map(i => i.productId === product.id ? { ...i, qty: i.qty - 1 } : i)
+  })
+  const setQty = (productId, qty) => setCart(prev =>
+    qty <= 0 ? prev.filter(i => i.productId !== productId)
+             : prev.map(i => i.productId === productId ? { ...i, qty } : i)
+  )
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return
+    setSubmitting(true)
+    try {
+      for (const item of cart) {
+        await supabase.from('transactions').insert({
+          type: 'outbound', product_id: item.productId,
+          from_location: fromId, to_location: null,
+          quantity: item.qty, operator, note: note || null,
+        })
+        const { data } = await supabase.from('inventory').select('quantity')
+          .eq('location_id', fromId).eq('product_id', item.productId).single()
+        await supabase.from('inventory').upsert({
+          location_id: fromId, product_id: item.productId,
+          quantity: Math.max(0, (data?.quantity || 0) - item.qty),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'location_id,product_id' })
+      }
+      setCart([]); setShowSheet(false); setOperator(''); setNote('')
+      setSubmitted(true); setTimeout(() => setSubmitted(false), 5000)
+    } catch (e) { alert(t.usageSubmitFail + e.message) }
+    setSubmitting(false)
+  }
+
+  return (
+    <div style={{ paddingBottom: cartTotal > 0 ? 76 : 0 }}>
+      {submitted && (
+        <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 10, padding: '13px 18px', marginBottom: 16, color: KITCHEN_ACCENT, fontSize: 14, fontWeight: 600 }}>
+          {t.usageSuccess}
+        </div>
+      )}
+
+      {/* 地點選擇 */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ ...G.label, fontSize: 13 }}>{t.usageLocation}</label>
+        <select value={fromId} onChange={e => { setFromId(e.target.value); setCart([]) }} style={{ ...G.input, maxWidth: 280 }}>
+          <option value="">{t.usageSelectLoc}</option>
+          {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+        </select>
+      </div>
+
+      {/* 品項格 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 12 }}>
+        {products.map(p => (
+          <ProductCard key={p.id} product={p} cartQty={cartMap[p.id] || 0}
+            onAdd={() => addToCart(p)} onRemove={() => removeOnce(p)}
+            stockInfo={stockByName[p.name]}
+            addLabel={t.usageBtn} accentColor={KITCHEN_ACCENT} />
+        ))}
+      </div>
+
+      {/* 底部 Bar */}
+      {cartTotal > 0 && (
+        <div onClick={() => setShowSheet(true)} style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: `linear-gradient(135deg,${KITCHEN_ACCENT},#7c3aed)`, padding: '14px 20px', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 -4px 20px rgba(139,92,246,0.4)', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff' }}>{cartTotal}</div>
+            <span style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{t.usageCount(cartTotal)}</span>
+          </div>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>{t.usageViewCart}</span>
+        </div>
+      )}
+
+      {/* 抽屜 */}
+      {showSheet && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+          <div onClick={() => setShowSheet(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#151b27', borderRadius: '20px 20px 0 0', padding: '16px 20px 36px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ width: 36, height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 99, margin: '0 auto 18px' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <span style={{ fontSize: 16, fontWeight: 700 }}>{t.usageList}</span>
+              <span style={{ fontSize: 13, color: KITCHEN_ACCENT, fontWeight: 600 }}>{cartTotal} {lang === 'zh' ? '項' : 'món'}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              {cart.map(item => (
+                <div key={item.productId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 10 }}>
+                  <span style={{ flex: 1, fontSize: 13 }}>{item.productName}</span>
+                  <button onClick={() => setQty(item.productId, item.qty - 1)} style={{ ...G.btn, padding: '3px 10px', fontSize: 15, minWidth: 30 }}>−</button>
+                  <span style={{ fontSize: 15, fontFamily: 'monospace', minWidth: 24, textAlign: 'center', color: KITCHEN_ACCENT, fontWeight: 700 }}>{item.qty}</span>
+                  <button onClick={() => setQty(item.productId, item.qty + 1)} style={{ ...G.btn, padding: '3px 10px', fontSize: 15, minWidth: 30 }}>＋</button>
+                  <button onClick={() => setCart(prev => prev.filter(i => i.productId !== item.productId))} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 16, padding: '3px 6px' }}>✕</button>
+                </div>
+              ))}
+            </div>
+            <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', margin: '0 0 14px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={G.label}>{t.usageYourName}</label>
+                <input placeholder={t.usageNamePh} value={operator} onChange={e => setOperator(e.target.value)} style={G.input} />
+              </div>
+              <div>
+                <label style={G.label}>{t.usageNoteOptional}</label>
+                <input placeholder={t.usageNotePh} value={note} onChange={e => setNote(e.target.value)} style={G.input} />
+              </div>
+              <button onClick={handleSubmit} disabled={!canSubmit} style={{ ...G.btnPrimary, width: '100%', textAlign: 'center', padding: 14, fontSize: 15, opacity: canSubmit ? 1 : 0.4, cursor: canSubmit ? 'pointer' : 'not-allowed', background: `linear-gradient(135deg,${KITCHEN_ACCENT},#7c3aed)` }}>
+                {submitting ? t.usageSubmitting : t.usageSubmitBtn}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── 老闆：進貨申請 Tab
 function PurchaseOrdersTab({ orders, onApprove, onReject }) {
   const lang = useLang()
@@ -631,14 +804,18 @@ function PurchaseOrdersTab({ orders, onApprove, onReject }) {
 }
 
 // ── 老闆密碼 Modal
-function PinModal({ onClose, onSuccess }) {
+function PinModal({ onClose, onSuccess, pinEnvKey, defaultPin, titleOverride, subOverride }) {
   const lang = useLang()
   const t = T[lang]
   const [pin, setPin] = useState('')
   const [error, setError] = useState(false)
 
+  const correctPin = pinEnvKey
+    ? (import.meta.env[pinEnvKey] || defaultPin || '1234')
+    : (import.meta.env.VITE_BOSS_PIN || '1234')
+
   const check = () => {
-    if (pin === (import.meta.env.VITE_BOSS_PIN || '1234')) {
+    if (pin === correctPin) {
       onSuccess()
     } else {
       setError(true)
@@ -652,8 +829,8 @@ function PinModal({ onClose, onSuccess }) {
       <div style={{ background: '#151b27', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: 32, width: 300, boxShadow: '0 24px 60px rgba(0,0,0,0.5)', animation: error ? 'shakeX .4s ease' : 'none' }}>
         <div style={{ textAlign: 'center', marginBottom: 22 }}>
           <div style={{ fontSize: 28, marginBottom: 8 }}>🔒</div>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{t.pinTitle}</div>
-          <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>{t.pinSub}</div>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>{titleOverride || t.pinTitle}</div>
+          <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>{subOverride || t.pinSub}</div>
         </div>
         <input
           type="password"
@@ -682,6 +859,9 @@ export default function App() {
   const [mode, setMode] = useState('employee')
   const [bossUnlocked, setBossUnlocked] = useState(false)
   const [showPinModal, setShowPinModal] = useState(false)
+  const [kitchenUnlocked, setKitchenUnlocked] = useState(false)
+  const [showKitchenPinModal, setShowKitchenPinModal] = useState(false)
+  const [kitchenCart, setKitchenCart] = useState([])
   const [tab, setTab] = useState('overview')
   const [loading, setLoading] = useState(true)
   const [locations, setLocations] = useState([])
@@ -856,6 +1036,12 @@ export default function App() {
               border: `1px solid ${mode === 'boss' ? '#f97316' : 'transparent'}`,
               color: mode === 'boss' ? '#f97316' : '#64748b', transition: 'all .15s',
             }}>🔒 <span className="hdr-mode-text">{t.bossMode}</span></button>
+            <button onClick={() => kitchenUnlocked ? setMode('kitchen') : setShowKitchenPinModal(true)} style={{
+              padding: '5px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+              background: mode === 'kitchen' ? 'rgba(139,92,246,0.2)' : 'transparent',
+              border: `1px solid ${mode === 'kitchen' ? KITCHEN_ACCENT : 'transparent'}`,
+              color: mode === 'kitchen' ? KITCHEN_ACCENT : '#64748b', transition: 'all .15s',
+            }}>🍳 <span className="hdr-mode-text">{t.kitchenMode}</span></button>
           </div>
 
           {/* 右側按鈕 */}
@@ -903,6 +1089,17 @@ export default function App() {
               locations={locations}
               cart={cart}
               setCart={setCart}
+            />
+          )}
+
+          {/* ══ 廚房端 */}
+          {mode === 'kitchen' && (
+            <KitchenView
+              products={products}
+              inventory={inventory}
+              locations={locations}
+              cart={kitchenCart}
+              setCart={setKitchenCart}
             />
           )}
 
@@ -1055,6 +1252,16 @@ export default function App() {
           <PinModal
             onClose={() => setShowPinModal(false)}
             onSuccess={() => { setBossUnlocked(true); setMode('boss'); setShowPinModal(false) }}
+          />
+        )}
+        {showKitchenPinModal && (
+          <PinModal
+            pinEnvKey="VITE_KITCHEN_PIN"
+            defaultPin="5678"
+            titleOverride={t.kitchenPinTitle}
+            subOverride={t.kitchenPinSub}
+            onClose={() => setShowKitchenPinModal(false)}
+            onSuccess={() => { setKitchenUnlocked(true); setMode('kitchen'); setShowKitchenPinModal(false) }}
           />
         )}
       </div>
